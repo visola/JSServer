@@ -64,6 +64,7 @@ public class Server {
 			listener = new ServerSocket(port);
 			this.password = password;
 			this.acceptRemote = acceptRemote;
+			setName("Shutdown Listener");
 		}
 
 		/**
@@ -136,6 +137,11 @@ public class Server {
 	 * @author Vinicius Isola
 	 */
 	private class ShutdownThread extends Thread {
+
+		public ShutdownThread () {
+			setName("Shutdown Thread");
+		}
+
 		@Override
 		public void run() {
 			if (server != null && server.isRunning()) {
