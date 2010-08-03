@@ -26,5 +26,8 @@
 	<classpathentry kind="var" path="LIBS/org.eclipse.jetty.continuation-7.1.4.jar"/>
 	<classpathentry kind="var" path="LIBS/org.slf4j.log4j12-1.6.0.jar"/>
 	<classpathentry kind="var" path="LIBS/org.apache.log4j-1.2.16.jar"/>
+	<classpathentry kind="var" path="LIBS/org.h2-1.2.126.jar"/>
+	<classpathentry kind="var" path="LIBS/org.apache.commons.dbcp-1.4.jar"/>
+	<classpathentry kind="var" path="LIBS/org.apache.commons.pool-1.5.4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

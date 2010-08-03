@@ -1,3 +1,8 @@
+/*
+ * Copyright by Vinicius Isola, 2010
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/mit-license.php
+ */
 package br.com.depasser.jsservlet;
 
 import java.io.BufferedReader;

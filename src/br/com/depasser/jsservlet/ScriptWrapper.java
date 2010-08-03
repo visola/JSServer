@@ -1,3 +1,8 @@
+/*
+ * Copyright by Vinicius Isola, 2010
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/mit-license.php
+ */
 package br.com.depasser.jsservlet;
 
 import java.io.BufferedReader;
@@ -16,34 +21,34 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Wraps a script file.
  * </p>
- *  
+ *
  * @author Vinicius Isola
  */
 public class ScriptWrapper implements Script {
-	
+
 	/**
 	 * SLF4J logger.
 	 */
 	private Logger logger = LoggerFactory.getLogger(ScriptWrapper.class);
-	
+
 	/**
 	 * Wrapped script.
 	 */
 	protected Script script;
-	
+
 	/**
 	 * Last time the file was modified.
 	 */
 	protected long lastModified = -1;
-	
+
 	/**
 	 * Javascript file.
 	 */
 	protected final File file;
-	
+
 	/**
 	 * Create a new wrapper associated with the specified file.
-	 * 
+	 *
 	 * @param file
 	 *            Javascript file.
 	 */
@@ -53,7 +58,7 @@ public class ScriptWrapper implements Script {
 
 	/**
 	 * Store the last modified date when the file was last compiled.
-	 * 
+	 *
 	 * @return Last modified date when the file was compiled for the last time
 	 */
 	public long getLastModified() {
@@ -62,19 +67,19 @@ public class ScriptWrapper implements Script {
 
 	/**
 	 * Return the wrapped script.
-	 * 
+	 *
 	 * @return Wrapped script.
 	 */
 	public Script getScript() {
 		return script;
 	}
-	
+
 	/**
 	 * <p>
 	 * If the script is not compiled then, compile it and execute. If the file
 	 * was modified after the last compilation, the script will be recompiled.
 	 * </p>
-	 * 
+	 *
 	 * @param context
 	 *            Context to use.
 	 * @param scope
@@ -94,13 +99,13 @@ public class ScriptWrapper implements Script {
 				new RuntimeException("Error while compiling script.", ioe);
 			}
 		}
-		
-		return this.script.exec(context, scope);
+
+		return script.exec(context, scope);
 	}
-	
+
 	/**
 	 * Read the script file from disc and return its content.
-	 * 
+	 *
 	 * @param scriptFile
 	 *            File to read content from.
 	 * @return The file content.
@@ -130,7 +135,7 @@ public class ScriptWrapper implements Script {
 	/**
 	 * Compile the content from {@link #file} to {@link #script} and update
 	 * {@link #lastModified}.
-	 * 
+	 *
 	 * @param context
 	 *            Context to use.
 	 * @throws IOException
@@ -138,8 +143,8 @@ public class ScriptWrapper implements Script {
 	 */
 	protected void compile(Context context) throws IOException {
 		String scriptContent = readScriptFile(file);
-		this.script = context.compileString(scriptContent, file.getName(), 1, null);
-		this.lastModified = file.lastModified();
+		script = context.compileString(scriptContent, file.getName(), 1, null);
+		lastModified = file.lastModified();
 	}
 
 }

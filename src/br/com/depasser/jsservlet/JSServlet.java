@@ -1,3 +1,8 @@
+/*
+ * Copyright by Vinicius Isola, 2010
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/mit-license.php
+ */
 package br.com.depasser.jsservlet;
 
 import java.io.File;
@@ -313,7 +318,7 @@ public class JSServlet extends HttpServlet {
 		try {
 			// Add a logger to the script
 			Logger scriptLogger = LoggerFactory.getLogger("bootstrap");
-			RhinoUtils.addToScriptable(mainScope, "log", scriptLogger);
+			RhinoUtils.addToScriptable(mainScope, "logger", scriptLogger);
 
 			// Boot timer
 			ExtendedTimer timer = new ExtendedTimer(false);

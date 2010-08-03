@@ -1,3 +1,8 @@
+/*
+ * Copyright by Vinicius Isola, 2010
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/mit-license.php
+ */
 package br.com.depasser.jsservlet;
 
 import java.io.File;
@@ -98,6 +103,10 @@ public class ScriptProcessor {
 				fName.append(file.getName());
 				logger.debug("Executing script: {}", fName.toString());
 			}
+
+			// Add a logger with the name of the script to the scope
+			RhinoUtils.addToScriptable(scope, "logger", LoggerFactory.getLogger(file.getAbsolutePath()));
+
 			return wrapper.exec(context, scope);
 		} finally {
 			Context.exit();
