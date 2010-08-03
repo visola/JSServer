@@ -20,7 +20,7 @@ import br.com.depasser.jsservlet.Environment.PROPERTY;
  * <p>
  * Responsible for running scripts.
  * </p>
- * 
+ *
  * @author Vinicius Isola
  */
 public class ScriptProcessor {
@@ -34,7 +34,7 @@ public class ScriptProcessor {
 	 * Store compiled scripts.
 	 */
 	protected Map<File, ScriptWrapper> scripts = new HashMap<File, ScriptWrapper>();
-	
+
 	/**
 	 * Environment to read configurations from.
 	 */
@@ -50,7 +50,7 @@ public class ScriptProcessor {
 
 	/**
 	 * Run a javascript file using the specified scope.
-	 * 
+	 *
 	 * @param fileName
 	 *            Path to the file that should be run.
 	 * @param scope
@@ -61,14 +61,13 @@ public class ScriptProcessor {
 	 * @throws IOException
 	 *             If an error occur while reading the file.
 	 */
-	public Object runScript(String fileName, Scriptable scope)
-			throws RhinoException, IOException {
+	public Object runScript(String fileName, Scriptable scope) throws RhinoException, IOException {
 		return runScript(new File(fileName), scope);
 	}
 
 	/**
 	 * Run a javascript file using the specified scope.
-	 * 
+	 *
 	 * @param file
 	 *            File that should be run.
 	 * @param scope
@@ -79,8 +78,7 @@ public class ScriptProcessor {
 	 * @throws IOException
 	 *             If an error occur while reading the file.
 	 */
-	public Object runScript(File file, Scriptable scope) throws RhinoException,
-			IOException {
+	public Object runScript(File file, Scriptable scope) throws RhinoException, IOException {
 
 		// Get script wrapper or create a new one
 		ScriptWrapper wrapper = getScriptWrapper(file);
@@ -90,7 +88,16 @@ public class ScriptProcessor {
 
 		try {
 			// Run the script
-			logger.debug("Executing script: {}", file.getName());
+			if (logger.isDebugEnabled()) {
+				File parent = file.getParentFile();
+				StringBuilder fName = new StringBuilder();
+				if (parent != null) {
+					fName.append(parent.getName());
+					fName.append("/");
+				}
+				fName.append(file.getName());
+				logger.debug("Executing script: {}", fName.toString());
+			}
 			return wrapper.exec(context, scope);
 		} finally {
 			Context.exit();
@@ -100,7 +107,7 @@ public class ScriptProcessor {
 	/**
 	 * Return the {@link ScriptWrapper wrapper} for a specified script if
 	 * already created. If not available, one will be created and returned.
-	 * 
+	 *
 	 * @param file
 	 *            File to read the script from.
 	 * @return The <code>wrapper</code> for the specified file.
@@ -115,18 +122,18 @@ public class ScriptProcessor {
 		}
 		return wrapper;
 	}
-	
+
 	/**
 	 * <p>
 	 * Load all files recursively from <code>file</code> loading all of them
 	 * using the parent file as the parent scope. This is useful to create a
 	 * model from directory structure.
 	 * </p>
-	 * 
+	 *
 	 * <p>
 	 * Example:
 	 * </p>
-	 * 
+	 *
 	 * <ul>
 	 * File structure:
 	 * <li>
@@ -135,40 +142,40 @@ public class ScriptProcessor {
 	 * <ul>
 	 * <li>
 	 * User.js - defines many user classes, including User:
-	 * 
+	 *
 	 * <pre>
 	 * var User = function () {
 	 * 	...
 	 * }
 	 * </pre>
-	 * 
+	 *
 	 * </li>
 	 * <li>Contact.js - defines many contact classes, including Contact:
-	 * 
+	 *
 	 * <pre>
 	 * var Contact = function () {
 	 * 	...
 	 * }
 	 * </pre>
-	 * 
+	 *
 	 * </li>
 	 * </ul>
 	 * </li>
 	 * </ul>
 	 * </li>
 	 * </ul>
-	 * 
+	 *
 	 * <p>
 	 * After calling this method, the object returned will contain an object
 	 * <code>user</code> with many classes (functions) inside it, including User
 	 * and Contact. To create an instance of them, would be necessary to do the
 	 * following:
 	 * </p>
-	 * 
+	 *
 	 * <pre>
 	 * var u = new user.User();
 	 * </pre>
-	 * 
+	 *
 	 * @param file
 	 *            Start reading from here. Can be a file or directory. If file
 	 *            will be executed using <code>parent</code> as the scope. If
@@ -206,8 +213,7 @@ public class ScriptProcessor {
 				if (subFiles != null) {
 					for (File subFile : subFiles) {
 						Scriptable subObj = createObjectFromFiles(subFile, obj);
-						RhinoUtils.addToScriptable(obj, subFile.getName(),
-								subObj);
+						RhinoUtils.addToScriptable(obj, subFile.getName(), subObj);
 					}
 				}
 			}

@@ -284,36 +284,28 @@ public class JSServlet extends HttpServlet {
 
 		/*
 		 * Create the default scope. This is where everything will be loaded
-		 * from and from where all other scopes will be created from. Used to
-		 * run every scripts in the server.
+		 * from and from where all other scopes will be created. Used to
+		 * run all scripts in the server.
 		 */
 		Scriptable mainScope = new ImporterTopLevel(context);
 		scopeManager = new ScopeManager(mainScope);
+
+		// Create the script processor and add it to the main scope
 		processor = new ScriptProcessor(env);
+		RhinoUtils.addToScriptable(mainScope, "processor", processor);
 
 		// Add locations to default scope
 
-		/*
-		 * Application context (used to access JSServlet and everything in this
-		 * application)
-		 */
+		// Application context (used to access JSServlet and everything in this application)
 		RhinoUtils.addToScriptable(mainScope, "APP_ROOT", servletContext.getContextPath());
 
 		// Application directory (where to find application files)
-		RhinoUtils.addToScriptable(mainScope, "APP_DIR", env.application .getDirectory().getName());
+		RhinoUtils.addToScriptable(mainScope, "APP_DIR", env.application .getDirectory().getAbsolutePath());
 
 		// Directory to find controller scripts
 		StringBuilder scriptDir = new StringBuilder();
-		scriptDir.append(env.application.getDirectory().getName());
-		scriptDir.append("/");
-		scriptDir.append(env.application.getController().getName());
+		scriptDir.append(env.application.getController().getAbsolutePath());
 		RhinoUtils.addToScriptable(mainScope, "SCRIPTS_DIR", scriptDir.toString());
-
-		// Path to use when accessing application resources
-		RhinoUtils.addToScriptable(mainScope, "APP_PATH", env.getProperty(PROPERTY.APP_PATH));
-
-		// Path to use when accessing server resources
-		RhinoUtils.addToScriptable(mainScope, "SERVER_PATH", env.getProperty(PROPERTY.SERVER_PATH));
 
 		// Add application properties
 		RhinoUtils.addToScriptable(mainScope, "APP_PROPS", env);
