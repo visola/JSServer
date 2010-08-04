@@ -1,0 +1,70 @@
+#chat {
+	width: 300px;
+	border: 1px solid #333;
+	padding: 10px;
+}
+	
+#chat ul {
+	height: 150px;
+	border: 1px solid black;
+	overflow: auto;
+	list-style: none;
+	padding: 2px;
+}
+
+#chat ul li {
+	border: 1px solid #444;
+	padding: 2px;
+	margin: 1px 0;
+}
+
+#chat ul li span {
+	background: #DDF;
+	display: inline-block;
+	width: 100px;
+	text-align: right;
+	border-right: 1px solid #444;
+	padding: 0 5px;
+}
+
+#chat ul li.me {
+	border: 1px solid #AAA; 
+}
+
+#chat ul li.me span {
+	background: #FFD;
+	border-right: 1px solid #AAA;
+}
+
+#chatList {
+	width: 300px;
+	border: 1px solid #555;
+	padding: 10px;
+}
+
+#chatList ul  {
+	margin: 10px 0;
+	height: 150px;
+	border: 1px solid black;
+	overflow: auto;
+	list-style: none;
+	padding: 2px;
+}
+
+#chatList ul  li {
+	border: 1px solid #444;
+	padding: 2px;
+	margin: 1px 0;
+}
+
+#chatList ul .joined {
+	background: #FED;
+}
+
+#message {
+	width: 200px;
+}
+
+.selected {
+	background : #DDF;
+}
