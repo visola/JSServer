@@ -290,88 +290,195 @@ database.Database.prototype.getConnection = function () {
 	return java.sql.DriverManager.getConnection('jdbc:apache:commons:dbcp:' + this.dbName);
 };
 
-database.Database.prototype.insert = function (tableName, obj, fields) {
+database.Query = new Class({
+	Implements : Options,
+	initialize : function (type, options) {
+		this.setOptions(options);
+		this.type = type;
+		this.values = [];
+		this.fields = [];
+		
+		// Set to default database if not set
+		if (!this.options.database) {
+			this.options.database = database['main'];
+		}
+	}
+});
+
+/**
+ * Query types.
+ */
+database.Query.Type = {
+		DELETE : 'delete',
+		INSERT : 'insert',
+		SELECT : 'select',
+		UPDATE : 'update'
+};
+
+database.Query.prototype.execute = function () {
+	return this.options.database.execute(this.build(), this.values);
+}
+
+database.Query.prototype.addField = function (field) {
+	fields.push(field);
+}
+
+database.Query.prototype.setFields = function (fields) {
+	this.fields = fields;
+}
+
+database.Query.prototype.addValue = function (value) {
+	this.values.push(value);
+}
+
+database.Query.prototype.setValues = function (values) {
+	this.values = values;
+}
+
+database.Query.prototype.addData = function (field, value) {
+	this.addField(field);
+	this.addValue(value);
+}
+
+database.Query.prototype.setData = function (data, fields) {
 	var values = [];
 	
 	// If not defined, fields will be the name of the object attributes
 	if (! fields) {
 		fields = [];
-		for (var n in obj) {
+		for (var n in data) {
 			fields.push(n.underscorate().toUpperCase());
-			values.push(obj[n]);
+			values.push(data[n]);
 		}
 	} else {
 		for (var i = 0; i < fields.length; i++) {
-			values.push(obj[fields[i]]);
+			values.push(data[fields[i]]);
 		}
 	}
 	
-	var query = 'insert into ' + tableName + ' (';
-	for (var i = 0; i < fields.length; i++) {
-		query += fields[i];
-		if (i != fields.length - 1) query += ',';
-	}
-	query += ') values (';
-	for (var i = 0; i < values.length; i++) {
-		query += '?';
-		if (i != fields.length - 1) query += ',';
-	}
-	query += ')';
-	
-	this.execute(query, values);
-};
-
-/**
- * <p>
- * Execute a select in the database and return the result in
- * an array of objects. Optionally a callback can be passed in
- * that will be called for each row retrieved from the database
- * while the data is being retrieved.
- * </p>
- *
- * <p>
- * The callback will receive two parameters, the object with 
- * the data retrieved and the row count.
- * </p>
- *
- * @param query {String}	The query to be executed.
- * @param callback {Function}	The callback to be called.
- * @return {Array}	An array containing all rows retrieved
- *					from the database or an empty array if
- *					none found.
- */
-database.Database.prototype.select = function(query, callback) {
-	var conn = this.getConnection();
-	
-	try {
-		var st = conn.createStatement();
-		var rs = st.executeQuery(query);
-		return database.rs.toArray(rs, callback, -1);
-	} finally {
-		database.close(conn);
-	}
-};
-
-/**
- * <p>
- * Insert query object. Can receive three parameters as options:
- * </p>
- * 
- * <ul>
- * <li>tableName - name of the table to insert the data into.</li>
- * <li>data - Data to be inserted. 
- * </ul>
- * 
- * @param options {Object} Options object, example: { tableName : 'PERSON', data : {id : 10, name : 'John Doe'}} 
- * Options can contain three parameters: tableName, data and fields.
- */
-database.Insert = function (options) {
-	
+	this.setFields(fields);
+	this.setValues(values);
 }
 
-database.Query = function (type, options) {
-	
+database.Query.prototype.validateFields = function () {
+	if (this.fields.length != this.values.length) {
+		throw new Error('Invalid number of parameters. Fields: ' + this.fields.length + ', Values: ' + this.values.length);
+	}
 }
+
+database.Query.prototype.build = function () {
+	throw new Error('Build not implemented on query type: ' + this.type);
+}
+
+database.TableQuery = new Class({
+	Extends : database.Query,
+	initialize : function (table, options) {
+		this.parent(database.Query.Type.INSERT, options);
+		
+		// Check for table
+		if (! table ) {
+			throw new Error('Table query needs a table name.');
+		}
+		this.table = table;
+		
+		if (this.options.data) {
+			this.setData(this.options.data, this.options.fields);
+		} else {
+			if (this.options.values) {
+				this.setValues(this.options.values);
+			}
+			if (this.options.fields) {
+				this.setValues(this.options.fields);
+			}
+		}
+	}
+});
+
+database.Insert = new Class({
+	Extends : database.TableQuery,
+	initialize : function (table, options) {
+		this.parent(table, options);
+	},
+	build : function () {
+		this.validateFields();
+		
+		var q = 'INSERT INTO ';
+		q += this.table;
+		
+		q += ' (';
+		for (var i = 0; i < this.fields.length; i++) {
+			q += this.fields[i];
+			if (i != this.fields.length - 1) q += ',';
+		}
+		q += ') values (';
+		for (var i = 0; i < this.values.length; i++) {
+			q += '?';
+			if (i != this.values.length - 1) q += ',';
+		}
+		q += ')';
+		return q;
+	}
+});
+
+database.Select = new Class({
+	Extends : database.TableQuery,
+	initialize : function (table, options) {
+		this.parent(table, options);
+		
+		if (this.options.columns) {
+			this.columns = this.options.columns;
+		} else {
+			this.columns = [];
+		}
+	},
+	build : function () {
+		this.validateFields();
+		
+		var q = 'SELECT ';
+		
+		// Set columns
+		if (!this.columns || this.columns.length == 0) {
+			q += ' * ';
+		} else {
+			for (var i = 0; i < this.columns.length; i++) {
+				switch ($type(this.columns[i])) {
+					// If an object, expect 
+					case 'object':
+						q += this.columns[i].column;
+						q += ' AS ';
+						q += this.columns[i].alias;
+						break;
+					case 'string':
+						q += this.columns[i];
+						break;
+					default:
+						throw new Error('Invalid column type: ' + $type(this.columns[i]) + ', Columns: ' + JSON.encode(this.columns));
+				}
+				if (i != this.columns.length - 1) q += ',';
+			}
+		}
+		
+		q += ' FROM ';
+		q += this.table;
+		
+		if (this.fields && this.fields.length > 0) {
+			q += ' WHERE ';
+			for (var i = 0; i < this.fields.length; i++) {
+				q += i == 1 ? ' ' : ' AND ';
+				q += this.fields[i];
+				q += ' = ? ';
+			}
+		}
+		
+		return q;
+	},
+	addColumn : function (col) {
+		this.columns.push(col);
+	},
+	setColumns : function (cols) {
+		this.columns = cols;
+	}
+});
 
 // Try to load default database from application properties
 (function () {

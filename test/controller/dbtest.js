@@ -6,4 +6,6 @@ var msgObj = {
 	created : java.lang.System.currentTimeMillis()
 };
 
-database.insert('message', msgObj);
+new database.Insert('message', {
+	data : msgObj
+}).execute();

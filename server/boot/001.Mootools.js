@@ -888,7 +888,7 @@ Object.reset = function(object, key){
 		return object;
 	}
 	
-	delete object[key];
+//	delete object[key]; // This breaks everything
 	
 	switch ($type(object[key])){
 		case 'object':
