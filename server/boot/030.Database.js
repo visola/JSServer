@@ -5,6 +5,11 @@
  */
 
 /**
+ * Separated logger for database utility.
+ */
+var dbLogger = org.slf4j.LoggerFactory.getLogger('database');
+
+/**
  * Namespace for database related objects, classes and functions.
  */
 var database = {};
@@ -59,7 +64,7 @@ database.ps = {};
  * @return {java.sql.PreaparedStatement} The prepared statement passed in.
  */
 database.ps.setParameter = function (ps, sqlType, index, param) {
-	logger.debug('Setting param, SQL Type: ' + sqlType + ', index: ' + index + ', type: ' + (typeof param) + ', value: ' + JSON.encode(param));
+	dbLogger.debug('Setting param, SQL Type: ' + sqlType + ', index: ' + index + ', type: ' + (typeof param) + ', value: ' + JSON.encode(param));
 	switch (sqlType) {
 		case java.sql.Types.DOUBLE:
 			ps.setDouble(index, param);
@@ -192,7 +197,7 @@ database.rs.toArray = function (resultSet, callback, fetchCount) {
  * @see {@link database#addDatabase}
  */
 database.Database = function (dbName, driver, url, user, password) {
-	logger.debug('Creating database pool, Driver: ' + driver + ', user: ' + user + ', URL: ' + url);
+	dbLogger.debug('Creating database pool, Driver: ' + driver + ', user: ' + user + ', URL: ' + url);
 	
 	this.dbName = dbName;
 	this.driver = driver;
@@ -247,7 +252,7 @@ database.Database = function (dbName, driver, url, user, password) {
  */
 database.Database.prototype.execute = function (sql, args) {
 	var conn = null;
-	logger.debug("Executing SQL: " + sql + ", with parameters: " + JSON.encode(args));
+	dbLogger.debug("Executing SQL: " + sql + ", with parameters: " + JSON.encode(args));
 	try {
 		conn = this.getConnection();
 		var ps = conn.prepareStatement(sql);
@@ -292,11 +297,11 @@ database.Database.prototype.getConnection = function () {
 
 database.Query = new Class({
 	Implements : Options,
-	initialize : function (type, options) {
+	initialize : function (options) {
 		this.setOptions(options);
-		this.type = type;
 		this.values = [];
 		this.fields = [];
+		dbLogger.debug("Creating query: " + JSON.encode(this));
 		
 		// Set to default database if not set
 		if (!this.options.database) {
@@ -316,11 +321,12 @@ database.Query.Type = {
 };
 
 database.Query.prototype.execute = function () {
-	return this.options.database.execute(this.build(), this.values);
+	return this.options.database.execute(this.build(), this.getValues());
 }
 
 database.Query.prototype.addField = function (field) {
-	fields.push(field);
+	if (!this.fields) this.fields = [];
+	this.fields.push(field);
 }
 
 database.Query.prototype.setFields = function (fields) {
@@ -328,7 +334,13 @@ database.Query.prototype.setFields = function (fields) {
 }
 
 database.Query.prototype.addValue = function (value) {
+	if (!this.values) this.values = [];
 	this.values.push(value);
+}
+
+database.Query.prototype.getValues = function () {
+	if (!this.values) return [];
+	return this.values;
 }
 
 database.Query.prototype.setValues = function (values) {
@@ -370,16 +382,131 @@ database.Query.prototype.build = function () {
 	throw new Error('Build not implemented on query type: ' + this.type);
 }
 
+database.Condition = new Class({
+	Implements : Options, 
+	initialize : function () {
+		var options = {};
+		switch (arguments.length) {
+			// If one argument, must be the options
+			case 1:
+				options = arguments[0];
+				break;
+			
+			/* Two or Three arguments:
+			 * 0 - Field
+			 * 1 - Value
+			 * 2 - Operator
+			 */
+			case 2:
+			case 3:
+				options.field = arguments[0];
+				options.value = arguments[1];
+				options.operator = arguments[2];
+				break;
+		}
+		
+		this.setOptions(options);
+		this.field = this.options.field;
+		this.value = this.options.value;
+		this.operator = this.options.operator;
+	},
+	validate : function () {
+		if (this.field === null || this.field === undefined) {
+			throw new Error('Field not set.');
+		}
+		if (this.value === null || this.value === undefined) {
+			throw new Error('Value not set.');
+		}
+		if (this.operator === null || this.operator === undefined) {
+			throw new Error('Operator not set.');
+		}
+	},
+	build : function () {
+		this.validate();
+		var r = this.field;
+		r += ' ';
+		r += this.operator;
+		r += ' ?';
+		return r;
+	},
+	getValues : function () {
+		this.validate();
+		var r = [this.value]; 
+		dbLogger.debug('Condition value: ' + JSON.encode(r));
+		return r;
+	}
+});
+
+database.EqualsCondition = new Class({
+	Extends : database.Condition,
+	initialize : function () {
+		this.parent.apply(this, arguments);
+		this.operator = '=';
+	}
+});
+
+database.GreaterThanCondition = new Class({
+	Extends : database.Condition,
+	initialize : function (field, value) {
+		options.operator = '>';
+		this.parent(options);
+	}
+});
+
+database.LessThanCondition = new Class({
+	Extends : database.Condition,
+	initialize : function (field, value) {
+		options.operator = '<';
+		this.parent(options);
+	}
+});
+
+database.GreaterOrEqualsCondition = new Class({
+	Extends : database.Condition,
+	initialize : function (field, value) {
+		options.operator = '>=';
+		this.parent(options);
+	}
+});
+
+database.LessOrEqualsCondition = new Class({
+	Extends : database.Condition,
+	initialize : function (field, value) {
+		options.operator = '<=';
+		this.parent(options);
+	}
+});
+
 database.TableQuery = new Class({
 	Extends : database.Query,
-	initialize : function (table, options) {
-		this.parent(database.Query.Type.INSERT, options);
+	initialize : function () {
+		var options = {};
+		switch (arguments.length) {
+			// If one argument, it can be options or a table name
+			case 1:
+				switch ($type(arguments[0])) {
+					case 'string':
+						options.table = arguments[0];
+						break;
+					default:
+						options = arguments[0];
+						break;
+				}
+				break;
+			// If two arguments, the first must be the table name
+			case 2:
+				options = arguments[1];
+				options.table = arguments[0];
+				break;
+		}
+		
+		this.parent(options);
 		
 		// Check for table
-		if (! table ) {
+		if (! this.options.table ) {
 			throw new Error('Table query needs a table name.');
 		}
-		this.table = table;
+		this.table = this.options.table;
 		
 		if (this.options.data) {
 			this.setData(this.options.data, this.options.fields);
@@ -390,14 +517,83 @@ database.TableQuery = new Class({
 			if (this.options.fields) {
 				this.setValues(this.options.fields);
 			}
+			if (this.options.field) {
+				this.addField(this.options.field);
+			}
+			if (this.options.value) {
+				this.addValue(this.options.value);
+			}
 		}
+	}
+});
+
+database.ConditionQuery = new Class({
+	Extends : database.TableQuery,
+	initialize : function () {
+		this.parent.apply(this, arguments);
+		if (this.options.operator) {
+			this.fields = [];
+			this.values = [];
+			var cond = new database.Condition({
+					field : this.options.field, 
+					value : this.options.value,
+					operator : this.options.operator
+			});
+			this.addCondition(cond);
+		} else {
+			if (this.options.conditions) {
+				this.conditions = this.options.conditions;
+			} else {
+				this.conditions = [];
+			}
+		}
+	},
+	addCondition : function (condition) {
+		if (!this.conditions) this.conditions = [];
+		this.conditions.push(condition);
+	},
+	setConditions : function (conditions) {
+		this.conditions = conditions;
+	},
+	buildConditions : function () {
+		var q = '';
+		var fieldsSet = false;
+		if (this.fields && this.fields.length > 0) {
+			fieldsSet = true;
+			for (var i = 0; i < this.fields.length; i++) {
+				q += i == 0 ? ' ' : ' AND ';
+				q += this.fields[i];
+				q += ' = ? ';
+			}
+		}
+		
+		if (this.conditions && this.conditions.length > 0) {
+			for (var i = 0; i < this.conditions.length; i++) {
+				q += (i == 0 && fieldsSet !== true) ? ' ' : ' AND ';
+				q += this.conditions[i].build();
+			}
+		}
+		return q;
+	},
+	getValues : function () {
+		var r = this.values ? this.values : [];
+		if (this.conditions && this.conditions.length > 0) {
+			for (var i = 0; i < this.conditions.length; i++) {
+				var v = this.conditions[i].getValues(); 
+				for (var j = 0; j < v.length; j++) {
+					r.push(v[j]);
+				}
+			}
+		}
+		return r;
 	}
 });
 
 database.Insert = new Class({
 	Extends : database.TableQuery,
-	initialize : function (table, options) {
-		this.parent(table, options);
+	initialize : function () {
+		this.parent.apply(this, arguments);
+		this.type = database.Query.Type.INSERT;
 	},
 	build : function () {
 		this.validateFields();
@@ -421,15 +617,23 @@ database.Insert = new Class({
 });
 
 database.Select = new Class({
-	Extends : database.TableQuery,
-	initialize : function (table, options) {
-		this.parent(table, options);
+	Extends : database.ConditionQuery,
+	initialize : function () {
+		this.parent.apply(this, arguments);
+		this.type = database.Query.Type.SELECT;
 		
 		if (this.options.columns) {
 			this.columns = this.options.columns;
 		} else {
 			this.columns = [];
 		}
+	},
+	addColumn : function (col) {
+		if (!this.columns) this.columns = [];
+		this.columns.push(col);
+	},
+	setColumns : function (cols) {
+		this.columns = cols;
 	},
 	build : function () {
 		this.validateFields();
@@ -460,23 +664,10 @@ database.Select = new Class({
 		
 		q += ' FROM ';
 		q += this.table;
-		
-		if (this.fields && this.fields.length > 0) {
-			q += ' WHERE ';
-			for (var i = 0; i < this.fields.length; i++) {
-				q += i == 1 ? ' ' : ' AND ';
-				q += this.fields[i];
-				q += ' = ? ';
-			}
-		}
+		q += ' WHERE ';
+		q += this.buildConditions();
 		
 		return q;
-	},
-	addColumn : function (col) {
-		this.columns.push(col);
-	},
-	setColumns : function (cols) {
-		this.columns = cols;
 	}
 });
 
