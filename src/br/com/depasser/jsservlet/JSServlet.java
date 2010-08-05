@@ -316,8 +316,8 @@ public class JSServlet extends HttpServlet {
 		RhinoUtils.addToScriptable(mainScope, "APP_PROPS", env);
 
 		try {
-			// Add a logger to the script
-			Logger scriptLogger = LoggerFactory.getLogger("bootstrap");
+			// Add a logger to the main scope
+			Logger scriptLogger = LoggerFactory.getLogger("jsservlet.bootstrap");
 			RhinoUtils.addToScriptable(mainScope, "logger", scriptLogger);
 
 			// Boot timer
