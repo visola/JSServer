@@ -5,14 +5,14 @@
  */
 
 /**
- * Separated logger for database utility.
- */
-var dbLogger = org.slf4j.LoggerFactory.getLogger('database');
-
-/**
  * Namespace for database related objects, classes and functions.
  */
 var database = {};
+
+/**
+ * Separated logger for database utility.
+ */
+database.logger = org.slf4j.LoggerFactory.getLogger('database'); 
 
 /**
  * Create a new database pool with the specified name.
@@ -64,7 +64,7 @@ database.ps = {};
  * @return {java.sql.PreaparedStatement} The prepared statement passed in.
  */
 database.ps.setParameter = function (ps, sqlType, index, param) {
-	dbLogger.debug('Setting param, SQL Type: ' + sqlType + ', index: ' + index + ', type: ' + (typeof param) + ', value: ' + JSON.encode(param));
+	database.logger.debug('Setting param, SQL Type: ' + sqlType + ', index: ' + index + ', type: ' + (typeof param) + ', value: ' + JSON.encode(param));
 	switch (sqlType) {
 		case java.sql.Types.DOUBLE:
 			ps.setDouble(index, param);
@@ -197,7 +197,7 @@ database.rs.toArray = function (resultSet, callback, fetchCount) {
  * @see {@link database#addDatabase}
  */
 database.Database = function (dbName, driver, url, user, password) {
-	dbLogger.debug('Creating database pool, Driver: ' + driver + ', user: ' + user + ', URL: ' + url);
+	database.logger.debug('Creating database pool, Driver: ' + driver + ', user: ' + user + ', URL: ' + url);
 	
 	this.dbName = dbName;
 	this.driver = driver;
@@ -252,7 +252,7 @@ database.Database = function (dbName, driver, url, user, password) {
  */
 database.Database.prototype.execute = function (sql, args) {
 	var conn = null;
-	dbLogger.debug("Executing SQL: " + sql + ", with parameters: " + JSON.encode(args));
+	database.logger.debug("Executing SQL: " + sql + ", with parameters: " + JSON.encode(args));
 	try {
 		conn = this.getConnection();
 		var ps = conn.prepareStatement(sql);
@@ -294,382 +294,6 @@ database.Database.prototype.execute = function (sql, args) {
 database.Database.prototype.getConnection = function () {
 	return java.sql.DriverManager.getConnection('jdbc:apache:commons:dbcp:' + this.dbName);
 };
-
-database.Query = new Class({
-	Implements : Options,
-	initialize : function (options) {
-		this.setOptions(options);
-		this.values = [];
-		this.fields = [];
-		dbLogger.debug("Creating query: " + JSON.encode(this));
-		
-		// Set to default database if not set
-		if (!this.options.database) {
-			this.options.database = database['main'];
-		}
-	}
-});
-
-/**
- * Query types.
- */
-database.Query.Type = {
-		DELETE : 'delete',
-		INSERT : 'insert',
-		SELECT : 'select',
-		UPDATE : 'update'
-};
-
-database.Query.prototype.execute = function () {
-	return this.options.database.execute(this.build(), this.getValues());
-}
-
-database.Query.prototype.addField = function (field) {
-	if (!this.fields) this.fields = [];
-	this.fields.push(field);
-}
-
-database.Query.prototype.setFields = function (fields) {
-	this.fields = fields;
-}
-
-database.Query.prototype.addValue = function (value) {
-	if (!this.values) this.values = [];
-	this.values.push(value);
-}
-
-database.Query.prototype.getValues = function () {
-	if (!this.values) return [];
-	return this.values;
-}
-
-database.Query.prototype.setValues = function (values) {
-	this.values = values;
-}
-
-database.Query.prototype.addData = function (field, value) {
-	this.addField(field);
-	this.addValue(value);
-}
-
-database.Query.prototype.setData = function (data, fields) {
-	var values = [];
-	
-	// If not defined, fields will be the name of the object attributes
-	if (! fields) {
-		fields = [];
-		for (var n in data) {
-			fields.push(n.underscorate().toUpperCase());
-			values.push(data[n]);
-		}
-	} else {
-		for (var i = 0; i < fields.length; i++) {
-			values.push(data[fields[i]]);
-		}
-	}
-	
-	this.setFields(fields);
-	this.setValues(values);
-}
-
-database.Query.prototype.validateFields = function () {
-	if (this.fields.length != this.values.length) {
-		throw new Error('Invalid number of parameters. Fields: ' + this.fields.length + ', Values: ' + this.values.length);
-	}
-}
-
-database.Query.prototype.build = function () {
-	throw new Error('Build not implemented on query type: ' + this.type);
-}
-
-database.Condition = new Class({
-	Implements : Options, 
-	initialize : function () {
-		var options = {};
-		switch (arguments.length) {
-			// If one argument, must be the options
-			case 1:
-				options = arguments[0];
-				break;
-			
-			/* Two or Three arguments:
-			 * 0 - Field
-			 * 1 - Value
-			 * 2 - Operator
-			 */
-			case 2:
-			case 3:
-				options.field = arguments[0];
-				options.value = arguments[1];
-				options.operator = arguments[2];
-				break;
-		}
-		
-		this.setOptions(options);
-		this.field = this.options.field;
-		this.value = this.options.value;
-		this.operator = this.options.operator;
-	},
-	validate : function () {
-		if (this.field === null || this.field === undefined) {
-			throw new Error('Field not set.');
-		}
-		if (this.value === null || this.value === undefined) {
-			throw new Error('Value not set.');
-		}
-		if (this.operator === null || this.operator === undefined) {
-			throw new Error('Operator not set.');
-		}
-	},
-	build : function () {
-		this.validate();
-		var r = this.field;
-		r += ' ';
-		r += this.operator;
-		r += ' ?';
-		return r;
-	},
-	getValues : function () {
-		this.validate();
-		var r = [this.value]; 
-		dbLogger.debug('Condition value: ' + JSON.encode(r));
-		return r;
-	}
-});
-
-database.EqualsCondition = new Class({
-	Extends : database.Condition,
-	initialize : function () {
-		this.parent.apply(this, arguments);
-		this.operator = '=';
-	}
-});
-
-database.GreaterThanCondition = new Class({
-	Extends : database.Condition,
-	initialize : function (field, value) {
-		options.operator = '>';
-		this.parent(options);
-	}
-});
-
-database.LessThanCondition = new Class({
-	Extends : database.Condition,
-	initialize : function (field, value) {
-		options.operator = '<';
-		this.parent(options);
-	}
-});
-
-database.GreaterOrEqualsCondition = new Class({
-	Extends : database.Condition,
-	initialize : function (field, value) {
-		options.operator = '>=';
-		this.parent(options);
-	}
-});
-
-database.LessOrEqualsCondition = new Class({
-	Extends : database.Condition,
-	initialize : function (field, value) {
-		options.operator = '<=';
-		this.parent(options);
-	}
-});
-
-database.TableQuery = new Class({
-	Extends : database.Query,
-	initialize : function () {
-		var options = {};
-		switch (arguments.length) {
-			// If one argument, it can be options or a table name
-			case 1:
-				switch ($type(arguments[0])) {
-					case 'string':
-						options.table = arguments[0];
-						break;
-					default:
-						options = arguments[0];
-						break;
-				}
-				break;
-			// If two arguments, the first must be the table name
-			case 2:
-				options = arguments[1];
-				options.table = arguments[0];
-				break;
-		}
-		
-		this.parent(options);
-		
-		// Check for table
-		if (! this.options.table ) {
-			throw new Error('Table query needs a table name.');
-		}
-		this.table = this.options.table;
-		
-		if (this.options.data) {
-			this.setData(this.options.data, this.options.fields);
-		} else {
-			if (this.options.values) {
-				this.setValues(this.options.values);
-			}
-			if (this.options.fields) {
-				this.setValues(this.options.fields);
-			}
-			if (this.options.field) {
-				this.addField(this.options.field);
-			}
-			if (this.options.value) {
-				this.addValue(this.options.value);
-			}
-		}
-	}
-});
-
-database.ConditionQuery = new Class({
-	Extends : database.TableQuery,
-	initialize : function () {
-		this.parent.apply(this, arguments);
-		if (this.options.operator) {
-			this.fields = [];
-			this.values = [];
-			var cond = new database.Condition({
-					field : this.options.field, 
-					value : this.options.value,
-					operator : this.options.operator
-			});
-			this.addCondition(cond);
-		} else {
-			if (this.options.conditions) {
-				this.conditions = this.options.conditions;
-			} else {
-				this.conditions = [];
-			}
-		}
-	},
-	addCondition : function (condition) {
-		if (!this.conditions) this.conditions = [];
-		this.conditions.push(condition);
-	},
-	setConditions : function (conditions) {
-		this.conditions = conditions;
-	},
-	buildConditions : function () {
-		var q = '';
-		var fieldsSet = false;
-		if (this.fields && this.fields.length > 0) {
-			fieldsSet = true;
-			for (var i = 0; i < this.fields.length; i++) {
-				q += i == 0 ? ' ' : ' AND ';
-				q += this.fields[i];
-				q += ' = ? ';
-			}
-		}
-		
-		if (this.conditions && this.conditions.length > 0) {
-			for (var i = 0; i < this.conditions.length; i++) {
-				q += (i == 0 && fieldsSet !== true) ? ' ' : ' AND ';
-				q += this.conditions[i].build();
-			}
-		}
-		return q;
-	},
-	getValues : function () {
-		var r = this.values ? this.values : [];
-		if (this.conditions && this.conditions.length > 0) {
-			for (var i = 0; i < this.conditions.length; i++) {
-				var v = this.conditions[i].getValues(); 
-				for (var j = 0; j < v.length; j++) {
-					r.push(v[j]);
-				}
-			}
-		}
-		return r;
-	}
-});
-
-database.Insert = new Class({
-	Extends : database.TableQuery,
-	initialize : function () {
-		this.parent.apply(this, arguments);
-		this.type = database.Query.Type.INSERT;
-	},
-	build : function () {
-		this.validateFields();
-		
-		var q = 'INSERT INTO ';
-		q += this.table;
-		
-		q += ' (';
-		for (var i = 0; i < this.fields.length; i++) {
-			q += this.fields[i];
-			if (i != this.fields.length - 1) q += ',';
-		}
-		q += ') values (';
-		for (var i = 0; i < this.values.length; i++) {
-			q += '?';
-			if (i != this.values.length - 1) q += ',';
-		}
-		q += ')';
-		return q;
-	}
-});
-
-database.Select = new Class({
-	Extends : database.ConditionQuery,
-	initialize : function () {
-		this.parent.apply(this, arguments);
-		this.type = database.Query.Type.SELECT;
-		
-		if (this.options.columns) {
-			this.columns = this.options.columns;
-		} else {
-			this.columns = [];
-		}
-	},
-	addColumn : function (col) {
-		if (!this.columns) this.columns = [];
-		this.columns.push(col);
-	},
-	setColumns : function (cols) {
-		this.columns = cols;
-	},
-	build : function () {
-		this.validateFields();
-		
-		var q = 'SELECT ';
-		
-		// Set columns
-		if (!this.columns || this.columns.length == 0) {
-			q += ' * ';
-		} else {
-			for (var i = 0; i < this.columns.length; i++) {
-				switch ($type(this.columns[i])) {
-					// If an object, expect 
-					case 'object':
-						q += this.columns[i].column;
-						q += ' AS ';
-						q += this.columns[i].alias;
-						break;
-					case 'string':
-						q += this.columns[i];
-						break;
-					default:
-						throw new Error('Invalid column type: ' + $type(this.columns[i]) + ', Columns: ' + JSON.encode(this.columns));
-				}
-				if (i != this.columns.length - 1) q += ',';
-			}
-		}
-		
-		q += ' FROM ';
-		q += this.table;
-		q += ' WHERE ';
-		q += this.buildConditions();
-		
-		return q;
-	}
-});
 
 // Try to load default database from application properties
 (function () {
