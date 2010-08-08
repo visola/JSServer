@@ -1,0 +1,7 @@
+This test application was built to test the functionalities
+available in the JSServlet.
+
+To run it, just change the configuration file to point the
+application directory to ${PROJECT_ROOT}/test and start the server.
+
+Accessing the root context should show the test results.
