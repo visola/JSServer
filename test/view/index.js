@@ -1,15 +1,21 @@
 var page = html.html();
 
-page.append(html.head(html.title('Teste')));
+page.append(html.head(html.title('Test Suit')));
 
 var b = html.body();
 page.append(b);
 
-b.append(html.p('This is some content.'));
-b.append(html.p(path.root('test.js')));
-b.append(html.p(path.app('template/test.js')));
-b.append(html.p(path.controller('test.js')));
+b.append(html.h1('Test Result'));
 
-processor.runScript(path.app('template/test.js'), this);
+var r = test.result();
+logger.debug(JSON.encode(r));
 
-response.writer.print(page.render());
+b.append(html.p(
+	'Tests run: ' + r.total,
+	html.br(),
+	'Tests passed: ' + r.passed,
+	html.br(),
+	'Percentage: ' + r.percentage + '%'
+));
+
+Response.sendHTML(request, response, page);

@@ -76,8 +76,7 @@ database.Condition = new Class({
  */
 database.Condition.prototype.getValues = function () {
 	this.validate();
-	var r = [this.value]; 
-	return r;
+	return [this.value];
 }
 
 /**
@@ -144,3 +143,110 @@ database.Condition.LessOrEquals = new Class({
 		operator : '>='
 	}
 });
+
+database.Condition.Between = new Class({
+	Extends : database.Condition,
+	options : {
+		operator : 'BETWEEN'
+	},
+	initialize : function () {
+		// If three arguments, the third will be considered the second value
+		if (arguments.length == 3) {
+			this.options.field = arguments[0];
+			this.options.value = arguments[1];
+			this.options.value2 = arguments[2];
+		} else {
+			// Call parent constructor
+			this.parent.apply(this, arguments);
+		}
+	}
+});
+
+database.Condition.Between.prototype.validate = function () {
+	if (this.field === null || this.field === undefined) {
+		throw new Error('Field not set.');
+	}
+	if (this.value === null || this.value === undefined) {
+		throw new Error('Value not set.');
+	}
+	if (this.value2 === null || this.value2 === undefined) {
+		throw new Error('Second value not set.');
+	}
+	return this;
+}
+
+database.Condition.Between.prototype.build = function () {
+	this.validate();
+	var r = this.field;
+	r += ' BETWEEN ? AND ?';
+	return r;
+};
+
+database.Condition.Between.prototype.getValues = function () {
+	this.validate();
+	return [this.options.value, this.options.value2];
+}
+
+/**
+ * <p>
+ * Concatenate two or more conditions using the <code>OR</code> logical
+ * operator.
+ * </p>
+ * 
+ * <p>
+ * If one parameter is passed in the constructor, it will be assumed as options.
+ * If more than one parameters are passed in, they will be added as Conditions
+ * using the addCondition method.
+ * </p>
+ * 
+ * <ul>Options supported:
+ * <li>conditions - (Optional) the conditions to concatenate</li>
+ * </ul>
+ */
+database.Condition.Or = new Class({
+	Implements : Options,
+	options : {
+		conditions : []
+	},
+	initialize : function () {
+		switch (arguments.length) {
+			case 0:
+				break;
+			case 1:
+				this.setOptions(arguments[0]);
+				break;
+			default:
+				for (var i = 0; i < arguments.length; i++) {
+					this.addCondition(arguments[i]);
+				}
+				break;
+		}
+	}
+});
+
+/**
+ * Concatenate all conditions into one expression using the <code>OR</code>
+ * operator.
+ * 
+ * @return {String}	The generated condition.
+ */
+database.Condition.Or.prototype.build = function () {
+	var r = '(';
+	for (var i = 0; i < this.options.conditions.length; i++) {
+		r += this.options.conditions.build();
+		if (i != this.options.conditions.length - 1) r += ' OR ';
+	}
+	return r + ')';
+}
+
+/**
+ * Add a condition to be concatenated.
+ * 
+ * @param conditions
+ *            {database.Condition} The condition to be added.
+ * @return {database.Condition} This.
+ */
+database.Condition.Or.prototype.addCondition = function (condition) {
+	this.options.conditions.push(condition);
+	return this;
+};
