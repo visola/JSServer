@@ -13,8 +13,8 @@
  * <li>table (required) - name of the table to execute this query. May also be
  * provided separately, example:
  * <code>var q = new database.QueryImplementation('tableName', options);</code></li>
- * <li>database - the name of the database to be used to execute this query.
- * Default: 'main'</li>
+ * <li>database {String|database.Database} - the name of the database or the
+ * database to be used to execute this query. Default: 'main'</li>
  * <li>columns - can be used for queries that need to specify what data needs
  * to be selected, just like a Select statement. When the data is returned, it
  * will be returned as an array of objects and the properties that these objects
@@ -79,7 +79,11 @@ database.Query = new Class({
  *         the selected records.
  */
 database.Query.prototype.execute = function () {
-	return database[this.options.database].execute(this.build(), this.getValues());
+	if ($type(this.options.database) == 'string') {
+		return database[this.options.database].execute(this.build(), this.getValues());
+	} else {
+		return this.options.database.execute(this.build(), this.getValues());
+	}
 }
 
 /**
@@ -117,6 +121,7 @@ database.Query.prototype.getValues = function () {
 	for (var n in this.options.data) {
 		r.push(this.options.data[n]);
 	}
+	
 	// Condition values
 	if (this.options.conditions) {
 		for (var i = 0; i < this.options.conditions.length; i++) {
@@ -244,8 +249,8 @@ database.Insert = new Class({
 		}
 		
 		// Remove trailing commas
-		fields = fields.substring(fields.length - 1) + ')';
-		params = params.substring(params.length - 1) + ')';
+		fields = fields.substring(0, fields.length - 1) + ')';
+		params = params.substring(0, params.length - 1) + ')';
 		
 		var q = 'INSERT INTO ';
 		q += this.options.table;
@@ -304,10 +309,40 @@ database.Select = new Class({
 	}
 });
 
+database.Select.prototype.addData = function (obj, fields) {
+	for (var n in obj) {
+		if ($type(obj[n]) == 'function') continue;
+		if (!fields || fields.contains(n)) {
+			var c = new database.Condition(n, obj[n]);
+			this.addCondition(c);
+		}
+	}
+	return this;
+}
+
+database.Select.prototype.setData = function (obj, fields) {
+	this.options.conditions = [];
+	this.addData(obj, fields);
+}
+
+database.Select.prototype.getValues = function () {
+	var r = [];
+	// Condition values
+	if (this.options.conditions) {
+		for (var i = 0; i < this.options.conditions.length; i++) {
+			var v = this.options.conditions[i].getValues(); 
+			for (var j = 0; j < v.length; j++) {
+				r.push(v[j]);
+			}
+		}
+	}
+	return r;
+}
+
 /**
  * Update query. This query builds an <code>UPDATE</code> statement.
  */
-database.Select = new Class({
+database.Update = new Class({
 	Extends : database.Query,
 	initialize : function () {
 		this.parent.apply(this, arguments);
