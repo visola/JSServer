@@ -370,6 +370,8 @@ public class JSServlet extends HttpServlet {
 			}
 
 			logger.info("Bootstrap finished, total time: {} ms", timer.getTotal(UNIT.MILLI));
+		} catch (JavaScriptException jse) {
+			logger.error("Error booting environment.", jse);
 		} catch (IOException ioe) {
 			logger.error("Error while loading bootstrap file...");
 		} finally {
