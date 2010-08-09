@@ -10,6 +10,11 @@
 var test = {};
 
 /**
+ * File name used to identify this script.
+ */
+test.fileName = 'application_bootstrap_000.Tests.js';
+
+/**
  * Test logger.
  */
 test.logger = org.slf4j.LoggerFactory.getLogger('test');
@@ -64,14 +69,23 @@ test.end = function () {
 }
 
 test.addAssertion = function (message, passed) {
+	var stackTrace = java.lang.Thread.currentThread().getStackTrace();
+	var stack = [];
+	for (var i = 0; i < stackTrace.length; i++) {
+		var s = stackTrace[i];
+		if (s.fileName && s.fileName != test.fileName && s.fileName.endsWith('.js') && s.lineNumber > 0) {
+			stack.push(s);
+		}
+	}
+	
 	if (!test.active) {
 		test.start('[UNAMED]');
 	}
 	var assertion = {
 		message : message,
-		passed : passed ? true : false
+		passed : passed ? true : false,
+		stack : stack
 	}
-	test.logger.debug('Adding assertion: ' + JSON.encode(assertion) + ', to test: ' + test.active.name);
 	test.active.assertions.push(assertion);
 }
 
@@ -97,4 +111,25 @@ test.assertEquals = function (message, val1, val2) {
 
 test.assertNotEquals = function (message, val1, val2) {
 	test.assertTrue(message, val1 != val2);
+}
+
+test.assertDefined = function (message, val) {
+	test.assertTrue(message, val != null);
+}
+
+test.assertNotNull = function (message, val) {
+	test.assertTrue(message, val !== null);
+}
+
+test.assertNotUndefined = function (message, val) {
+	test.assertTrue(message, val !== undefined);
+}
+
+test.fail = function(message, func) {
+	try {
+		func();
+		test.assertTrue(message, false);
+	} catch (e) {
+		test.assertTrue(message, true);
+	}
 }
