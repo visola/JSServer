@@ -76,7 +76,7 @@ database.Condition = new Class({
  */
 database.Condition.prototype.getValues = function () {
 	this.validate();
-	return [this.value];
+	return [this.options.value];
 }
 
 /**
@@ -86,13 +86,13 @@ database.Condition.prototype.getValues = function () {
  * @return {database.Condition} The condition where this method was called.
  */
 database.Condition.prototype.validate = function () {
-	if (this.field === null || this.field === undefined) {
+	if (this.options.field === null || this.options.field === undefined) {
 		throw new Error('Field not set.');
 	}
-	if (this.value === null || this.value === undefined) {
+	if (this.options.value === null || this.options.value === undefined) {
 		throw new Error('Value not set.');
 	}
-	if (this.operator === null || this.operator === undefined) {
+	if (this.options.operator === null || this.options.operator === undefined) {
 		throw new Error('Operator not set.');
 	}
 	return this;
@@ -105,9 +105,9 @@ database.Condition.prototype.validate = function () {
  */
 database.Condition.prototype.build = function () {
 	this.validate();
-	var r = this.field;
+	var r = this.options.field;
 	r += ' ';
-	r += this.operator;
+	r += this.options.operator;
 	r += ' ?';
 	return r;
 }
@@ -163,13 +163,13 @@ database.Condition.Between = new Class({
 });
 
 database.Condition.Between.prototype.validate = function () {
-	if (this.field === null || this.field === undefined) {
+	if (this.options.field === null || this.options.field === undefined) {
 		throw new Error('Field not set.');
 	}
-	if (this.value === null || this.value === undefined) {
+	if (this.options.value === null || this.options.value === undefined) {
 		throw new Error('Value not set.');
 	}
-	if (this.value2 === null || this.value2 === undefined) {
+	if (this.options.value2 === null || this.options.value2 === undefined) {
 		throw new Error('Second value not set.');
 	}
 	return this;
@@ -177,7 +177,7 @@ database.Condition.Between.prototype.validate = function () {
 
 database.Condition.Between.prototype.build = function () {
 	this.validate();
-	var r = this.field;
+	var r = this.options.field;
 	r += ' BETWEEN ? AND ?';
 	return r;
 };
