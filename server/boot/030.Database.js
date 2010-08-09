@@ -12,7 +12,7 @@ var database = {};
 /**
  * Separated logger for database utility.
  */
-database.logger = org.slf4j.LoggerFactory.getLogger('database'); 
+database.logger = org.slf4j.LoggerFactory.getLogger('database');
 
 /**
  * Create a new database pool with the specified name.
@@ -27,9 +27,10 @@ database.logger = org.slf4j.LoggerFactory.getLogger('database');
  *            {String} User to be used.
  * @param password
  *            {String} Password for the specified user.
+ * @return {database.Database} The newly created database object.
  */
 database.addDatabase = function (dbName, driver, url, user, password) {
-	database[dbName] = new database.Database(dbName, driver, url, user, password);
+	return database[dbName] = new database.Database(dbName, driver, url, user, password);
 };
 
 /**
@@ -256,22 +257,24 @@ database.Database.prototype.execute = function (sql, args) {
 	try {
 		conn = this.getConnection();
 		var ps = conn.prepareStatement(sql);
-		
-		// Parameters metadata
-		var pMd = ps.getParameterMetaData();
 
-		// Set parameters
-		switch ($type(args)) {
-			case 'array': 
-				// if an array, use numbered parameters
-				for (var i = 0; i < args.length; i++) {
-					database.ps.setParameter(ps, pMd.getParameterType(i + 1), i + 1, args[i]);
-				}
-				break;
-			
-			default:
-				// Otherwise set it as parameter
-				database.ps.setParameter(ps, pMd.getParameterType(1), 1, args);
+		if (args != null && args.length > 0) {
+			// Parameters metadata
+			var pMd = ps.getParameterMetaData();
+	
+			// Set parameters
+			switch ($type(args)) {
+				case 'array': 
+					// if an array, use numbered parameters
+					for (var i = 0; i < args.length; i++) {
+						database.ps.setParameter(ps, pMd.getParameterType(i + 1), i + 1, args[i]);
+					}
+					break;
+				
+				default:
+					// Otherwise set it as parameter
+					database.ps.setParameter(ps, pMd.getParameterType(1), 1, args);
+			}
 		}
 		
 		var isQuery = ps.execute();
