@@ -128,7 +128,7 @@ database.rs.toArray = function (resultSet, callback, fetchCount) {
 	var columnNames = [];
 	var columnTypes = [];
 	for (var i = 1; i <= md.getColumnCount(); i++) {
-		columnNames.push(md.getColumnName(i));
+		columnNames.push(md.getColumnLabel(i));
 		columnTypes.push(md.getColumnType(i));
 	}
 	
