@@ -235,16 +235,13 @@ database.Query.prototype.buildConditions = function () {
  */
 database.Insert = new Class({
 	Extends : database.Query,
-	initialize : function () {
-		this.parent.apply(this, arguments);
-	},
 	build : function () {
 		// Create the fields and parameters from data object
 		var fields = '(';
 		var params = '(';
 		var data = this.options.data;
 		for (var n in data) {
-			fields += n + ',';
+			fields += n.underscorate() + ',';
 			params += '?,';
 		}
 		
@@ -267,9 +264,6 @@ database.Insert = new Class({
  */
 database.Select = new Class({
 	Extends : database.Query,
-	initialize : function () {
-		this.parent.apply(this, arguments);
-	},
 	build : function () {
 		var q = 'SELECT ';
 		
@@ -283,12 +277,12 @@ database.Select = new Class({
 				switch ($type(columns[i])) {
 					// If an object, expect 
 					case 'object':
-						q += columns[i].column;
+						q += columns[i].column.underscorate();
 						q += ' AS ';
 						q += columns[i].alias;
 						break;
 					case 'string':
-						q += columns[i];
+						q += columns[i].underscorate();
 						break;
 					default:
 						throw new Error('Invalid column type: ' + $type(columns[i]) + ', Columns: ' + JSON.encode(columns));
@@ -344,9 +338,6 @@ database.Select.prototype.getValues = function () {
  */
 database.Update = new Class({
 	Extends : database.Query,
-	initialize : function () {
-		this.parent.apply(this, arguments);
-	},
 	build : function () {		
 		var q = 'UPDATE ';
 		q += this.options.table;
@@ -360,7 +351,7 @@ database.Update = new Class({
 		var counter = 0;
 		for (var n in data) {
 			counter ++;
-			q += n;
+			q += n.underscorate();
 			q += ' = ?,';
 		}
 		
@@ -379,3 +370,18 @@ database.Update = new Class({
 		return q;
 	}
 });
+
+database.Delete = new Class({
+	Extends : database.Select,
+	build : function () {
+		var q = 'DELETE FROM ';
+		q += this.options.table;
+		
+		if (this.hasConditions()) {
+			q += ' WHERE ';
+			q += this.buildConditions();
+		}
+		
+		return q;
+	}
+})

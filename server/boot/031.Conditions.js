@@ -105,7 +105,7 @@ database.Condition.prototype.validate = function () {
  */
 database.Condition.prototype.build = function () {
 	this.validate();
-	var r = this.options.field;
+	var r = this.options.field.underscorate();
 	r += ' ';
 	r += this.options.operator;
 	r += ' ?';
@@ -177,7 +177,7 @@ database.Condition.Between.prototype.validate = function () {
 
 database.Condition.Between.prototype.build = function () {
 	this.validate();
-	var r = this.options.field;
+	var r = this.options.field.underscorate();
 	r += ' BETWEEN ? AND ?';
 	return r;
 };
